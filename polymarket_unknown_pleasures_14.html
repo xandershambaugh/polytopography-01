@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POLYMARKET — UNKNOWN MARKETS</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #000;
+    color: #fff;
+    font-family: 'Share Tech Mono', monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Grain texture overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    opacity: 0.35;
+    z-index: 10;
+  }
+
+  .header {
+    position: fixed;
+    top: 32px;
+    right: 36px;
+    text-align: right;
+    z-index: 20;
+    letter-spacing: 0.3em;
+  }
+
+  .header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(22px, 2.75vw, 40px);
+    letter-spacing: 0.5em;
+    color: #fff;
+    text-indent: 0.5em;
+  }
+
+  .header p {
+    font-size: 7.5px;
+    letter-spacing: 0.3em;
+    color: rgba(255,255,255,0.35);
+    margin-top: 3px;
+    text-transform: uppercase;
+    text-indent: 0.3em;
+  }
+
+  .header .date {
+    font-size: 7.5px;
+    letter-spacing: 0.3em;
+    color: rgba(255,255,255,0.2);
+    margin-top: 2px;
+    text-transform: uppercase;
+    text-indent: 0.3em;
+    display: block;
+  }
+
+  .footer {
+    position: fixed;
+    bottom: 28px;
+    left: 36px;
+    font-size: 8px;
+    letter-spacing: 0.5em;
+    color: rgba(255,255,255,0.25);
+    text-align: left;
+    z-index: 20;
+    text-indent: 0.5em;
+    text-transform: uppercase;
+  }
+
+  canvas {
+    display: block;
+    position: relative;
+    z-index: 5;
+  }
+
+  .market-label {
+    position: absolute;
+    right: calc(50% + 20px);
+    font-size: 7px;
+    letter-spacing: 0.2em;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    pointer-events: none;
+    text-align: right;
+  }
+
+  #info-panel {
+    position: fixed;
+    right: 36px;
+    top: 18%;
+    width: 200px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.9);
+    z-index: 20;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    line-height: 1.0;
+  }
+
+  #info-panel.visible {
+    opacity: 1;
+  }
+
+  #info-panel .panel-label {
+    font-size: 7px;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 0.3em;
+    margin-bottom: 3px;
+    display: block;
+  }
+
+  #info-panel .panel-value {
+    font-size: 11px;
+    color: #fff;
+    letter-spacing: 0.12em;
+    display: block;
+    margin-bottom: 12px;
+  }
+
+  #info-panel .panel-value.blue {
+    color: #0066FF;
+  }
+
+  #info-panel .divider {
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    margin: 10px 0;
+  }
+
+  #info-panel .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+
+  #info-panel .row .panel-label {
+    margin-bottom: 0;
+  }
+
+  #info-panel .row .panel-value {
+    margin-bottom: 0;
+    font-size: 10px;
+  }
+
+  #info-panel .bar-track {
+    width: 100%;
+    height: 2px;
+    background: rgba(255,255,255,0.1);
+    margin-top: 4px;
+    margin-bottom: 12px;
+    position: relative;
+  }
+
+  #info-panel .bar-fill {
+    height: 100%;
+    background: #0066FF;
+    transition: width 0.3s ease;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>POLYMARKET</h1>
+  <p>Current Prediction Market Landscape</p>
+  <span class="date">February 22, 2026</span>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<div id="info-panel">
+  <span class="panel-label">Market</span>
+  <span class="panel-value" id="ip-title">—</span>
+
+  <span class="panel-label">Category</span>
+  <span class="panel-value" id="ip-category">—</span>
+
+  <hr class="divider">
+
+  <div class="row">
+    <span class="panel-label">YES</span>
+    <span class="panel-value blue" id="ip-yes">—¢</span>
+  </div>
+  <div class="row">
+    <span class="panel-label">NO</span>
+    <span class="panel-value" id="ip-no">—¢</span>
+  </div>
+  <div class="bar-track"><div class="bar-fill" id="ip-bar"></div></div>
+
+  <div class="row">
+    <span class="panel-label">Spread</span>
+    <span class="panel-value" id="ip-spread">—¢</span>
+  </div>
+  <div class="row">
+    <span class="panel-label">Implied Prob</span>
+    <span class="panel-value" id="ip-prob">—%</span>
+  </div>
+
+  <hr class="divider">
+
+  <div class="row">
+    <span class="panel-label">Volume</span>
+    <span class="panel-value" id="ip-volume">—</span>
+  </div>
+  <div class="row">
+    <span class="panel-label">Traders</span>
+    <span class="panel-value" id="ip-traders">—</span>
+  </div>
+  <div class="row">
+    <span class="panel-label">Open Interest</span>
+    <span class="panel-value" id="ip-oi">—</span>
+  </div>
+</div>
+
+<div id="tooltip" style="display:none"></div>
+
+<div class="footer">
+  Each ridge = one market
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+// Real Polymarket market categories / labels
+const markets = [
+  { label: 'Trump Executive Actions', baseProb: 0.78, volatility: 0.22, spikes: [0.3, 0.55, 0.75], volume: 4820000, category: 'Politics', traders: 3241 },
+  { label: 'US Recession 2025', baseProb: 0.31, volatility: 0.18, spikes: [0.4, 0.7], volume: 2150000, category: 'Economics', traders: 1874 },
+  { label: 'Fed Rate Cut March', baseProb: 0.12, volatility: 0.09, spikes: [0.6], volume: 3670000, category: 'Economics', traders: 2209 },
+  { label: 'Gaza Ceasefire Hold', baseProb: 0.58, volatility: 0.28, spikes: [0.2, 0.5, 0.8], volume: 1980000, category: 'Geopolitics', traders: 1432 },
+  { label: 'Ukraine Ceasefire 2025', baseProb: 0.43, volatility: 0.25, spikes: [0.35, 0.65], volume: 5310000, category: 'Geopolitics', traders: 3887 },
+  { label: 'Russia NATO Conflict', baseProb: 0.08, volatility: 0.12, spikes: [0.45], volume: 890000, category: 'Geopolitics', traders: 762 },
+  { label: 'China Taiwan 2025', baseProb: 0.07, volatility: 0.10, spikes: [0.5, 0.75], volume: 1240000, category: 'Geopolitics', traders: 943 },
+  { label: 'Bitcoin $150k 2025', baseProb: 0.39, volatility: 0.31, spikes: [0.25, 0.6, 0.85], volume: 8940000, category: 'Crypto', traders: 6102 },
+  { label: 'AI Passes Bar Exam', baseProb: 0.82, volatility: 0.14, spikes: [0.4], volume: 2340000, category: 'Technology', traders: 1598 },
+  { label: 'OpenAI AGI Declared', baseProb: 0.19, volatility: 0.15, spikes: [0.55, 0.8], volume: 3120000, category: 'Technology', traders: 2741 },
+  { label: 'Nvidia $5T Market Cap', baseProb: 0.28, volatility: 0.22, spikes: [0.3, 0.7], volume: 4450000, category: 'Markets', traders: 3019 },
+  { label: 'S&P 500 All-Time High', baseProb: 0.61, volatility: 0.19, spikes: [0.4, 0.65], volume: 6780000, category: 'Markets', traders: 4422 },
+  { label: 'Super Bowl Champion', baseProb: 0.52, volatility: 0.35, spikes: [0.2, 0.5, 0.8], volume: 11200000, category: 'Sports', traders: 8834 },
+  { label: 'NBA Champion 2025', baseProb: 0.44, volatility: 0.28, spikes: [0.35, 0.6], volume: 7650000, category: 'Sports', traders: 5671 },
+  { label: 'Elon Musk Govt Role', baseProb: 0.71, volatility: 0.20, spikes: [0.3, 0.7], volume: 3290000, category: 'Politics', traders: 2388 },
+  { label: 'DOGE Budget Cuts', baseProb: 0.65, volatility: 0.18, spikes: [0.45, 0.75], volume: 2870000, category: 'Politics', traders: 2014 },
+  { label: 'US Dollar Dominance', baseProb: 0.77, volatility: 0.12, spikes: [0.55], volume: 1560000, category: 'Economics', traders: 1103 },
+  { label: 'Oil Price $100+', baseProb: 0.22, volatility: 0.20, spikes: [0.4, 0.7], volume: 2190000, category: 'Economics', traders: 1677 },
+  { label: 'New Pope Elected', baseProb: 0.34, volatility: 0.16, spikes: [0.5], volume: 980000, category: 'World', traders: 821 },
+  { label: 'German Elections CDU', baseProb: 0.68, volatility: 0.15, spikes: [0.4, 0.7], volume: 3410000, category: 'Politics', traders: 2556 },
+  { label: 'UK Snap Election', baseProb: 0.11, volatility: 0.08, spikes: [0.6], volume: 760000, category: 'Politics', traders: 612 },
+  { label: 'India Pakistan Conflict', baseProb: 0.06, volatility: 0.09, spikes: [0.5], volume: 540000, category: 'Geopolitics', traders: 489 },
+  { label: 'Pandemic 2025', baseProb: 0.04, volatility: 0.05, spikes: [0.4], volume: 310000, category: 'World', traders: 287 },
+  { label: 'Mars Mission 2026', baseProb: 0.31, volatility: 0.18, spikes: [0.35, 0.65], volume: 1870000, category: 'Science', traders: 1344 },
+  { label: 'SpaceX Starship Orbit', baseProb: 0.74, volatility: 0.16, spikes: [0.5], volume: 2640000, category: 'Science', traders: 1921 },
+  { label: 'US Immigration Policy', baseProb: 0.81, volatility: 0.17, spikes: [0.3, 0.6, 0.8], volume: 3980000, category: 'Politics', traders: 2803 },
+  { label: 'Tariffs on China 60%+', baseProb: 0.57, volatility: 0.22, spikes: [0.4, 0.7], volume: 5120000, category: 'Economics', traders: 3644 },
+  { label: 'TikTok Ban US', baseProb: 0.48, volatility: 0.29, spikes: [0.25, 0.55, 0.8], volume: 4330000, category: 'Technology', traders: 3211 },
+  { label: 'Crypto Regulation ETF', baseProb: 0.66, volatility: 0.20, spikes: [0.45, 0.7], volume: 6890000, category: 'Crypto', traders: 4987 },
+  { label: 'Iran Nuclear Deal', baseProb: 0.18, volatility: 0.14, spikes: [0.5, 0.75], volume: 1430000, category: 'Geopolitics', traders: 1102 },
+  { label: 'North Korea ICBM Test', baseProb: 0.43, volatility: 0.21, spikes: [0.35, 0.65], volume: 920000, category: 'Geopolitics', traders: 734 },
+  { label: 'WHO Reform 2025', baseProb: 0.37, volatility: 0.13, spikes: [0.5], volume: 680000, category: 'World', traders: 531 },
+];
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  draw();
+}
+
+// Seeded pseudo-random for deterministic ridge shapes per market
+function seededRand(seed) {
+  let s = seed;
+  return function() {
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    return (s >>> 0) / 0xffffffff;
+  };
+}
+
+function generateRidgePath(market, points, marketIndex) {
+  const rand = seededRand(marketIndex * 7919 + 31337);
+  const vals = new Float32Array(points + 1);
+
+  // --- Build a raw price series using a random walk with momentum ---
+  // This mimics actual market price action: flat periods, sudden moves, spikes
+  let price = market.baseProb * 0.35 + 0.04;
+  let momentum = 0;
+  const rawSeries = [];
+
+  for (let i = 0; i <= points; i++) {
+    const t = i / points;
+
+    // Momentum-driven random walk (like real price action)
+    const shock = (rand() - 0.5) * market.volatility * 0.18;
+    momentum = momentum * 0.72 + shock; // momentum decay
+    price += momentum;
+
+    // Mean reversion toward base level
+    price += (market.baseProb * 0.3 - price) * 0.03;
+
+    // Clamp
+    price = Math.max(0.01, Math.min(0.95, price));
+    rawSeries.push(price);
+  }
+
+  // --- Inject sharp spike events at market's key moments ---
+  for (const sp of market.spikes) {
+    const spikeIdx = Math.round(sp * points);
+    const spikeHeight = market.volatility * (0.5 + rand() * 0.7);
+    const spikeWidth = Math.floor(2 + rand() * 5); // sharp, narrow
+
+    for (let d = -spikeWidth; d <= spikeWidth; d++) {
+      const idx = spikeIdx + d;
+      if (idx >= 0 && idx <= points) {
+        // Triangle spike shape — sharp, not Gaussian
+        const falloff = 1 - Math.abs(d) / (spikeWidth + 1);
+        rawSeries[idx] = Math.min(0.98, rawSeries[idx] + spikeHeight * falloff);
+      }
+    }
+
+    // Add a brief sharp dip right after spike (like price rejection)
+    const dipIdx = spikeIdx + spikeWidth + 1;
+    if (dipIdx <= points) {
+      rawSeries[dipIdx] = Math.max(0.01, rawSeries[dipIdx] - spikeHeight * 0.35);
+    }
+  }
+
+  // --- Add high-frequency micro-noise on top (like CDJ waveform detail) ---
+  for (let i = 0; i <= points; i++) {
+    const hfNoise = (rand() - 0.5) * market.volatility * 0.09;
+    // Occasional micro-spike clusters
+    if (rand() < 0.06) {
+      rawSeries[i] += (rand() * market.volatility * 0.22);
+    }
+    rawSeries[i] = Math.max(0, Math.min(1, rawSeries[i] + hfNoise));
+  }
+
+  // --- Minimal smoothing — just 1 pass to remove single-sample artifacts ---
+  // Keep the jagged look; only kill aliasing noise
+  for (let i = 1; i < points; i++) {
+    vals[i] = rawSeries[i-1] * 0.15 + rawSeries[i] * 0.7 + rawSeries[i+1] * 0.15;
+  }
+  vals[0] = rawSeries[0];
+  vals[points] = rawSeries[points];
+
+  return vals;
+}
+
+const POLYBLUE = '#0066FF';
+const POLYBLUE_GLOW = 'rgba(0, 102, 255, 0.18)';
+
+let hoveredIndex = -1;
+
+function draw() {
+  const W = canvas.width;
+  const H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const numMarkets = markets.length;
+
+  const ridgeW = W * 0.54;
+  const ridgeH = H * 0.038;
+
+  const originX = W * 0.5;
+  const originY = H * 0.5;
+
+  const stepX = W * 0.008;
+  const stepY = H * 0.027;
+
+  const totalRows = numMarkets;
+  const startOffsetX = -(totalRows * stepX) / 2;
+  const startOffsetY = -(totalRows * stepY) / 2;
+
+  const POINTS = 280;
+
+  // Cache ridge geometry so we can draw labels after all ridges
+  const labelPositions = [];
+  const rightPositions = [];
+
+  // Draw ridges back to front
+  for (let rowIdx = 0; rowIdx < numMarkets; rowIdx++) {
+    const market = markets[rowIdx];
+    const isHovered = rowIdx === hoveredIndex;
+    const vals = generateRidgePath(market, POINTS, rowIdx);
+
+    const rowX = originX + startOffsetX + rowIdx * stepX;
+    const rowY = originY + startOffsetY + rowIdx * stepY;
+    const leftX = rowX - ridgeW / 2;
+    const rightX = rowX + ridgeW / 2;
+
+    const topPoints = [];
+    for (let i = 0; i <= POINTS; i++) {
+      const px = leftX + (i / POINTS) * (rightX - leftX);
+      const py = rowY - vals[i] * ridgeH * 6.5;
+      topPoints.push([px, py]);
+    }
+
+    // Black fill to occlude ridges behind
+    ctx.beginPath();
+    ctx.moveTo(leftX, rowY + 2);
+    for (const [px, py] of topPoints) ctx.lineTo(px, py);
+    ctx.lineTo(rightX, rowY + 2);
+    ctx.closePath();
+    ctx.fillStyle = '#000';
+    ctx.fill();
+
+    // Ridge stroke — blue if hovered, white otherwise
+    const alpha = 0.55 + (rowIdx / numMarkets) * 0.45;
+
+    if (isHovered) {
+      // Soft glow pass underneath
+      ctx.beginPath();
+      ctx.moveTo(topPoints[0][0], topPoints[0][1]);
+      for (const [px, py] of topPoints.slice(1)) ctx.lineTo(px, py);
+      ctx.strokeStyle = POLYBLUE_GLOW;
+      ctx.lineWidth = 6;
+      ctx.stroke();
+
+      // Crisp blue line on top
+      ctx.beginPath();
+      ctx.moveTo(topPoints[0][0], topPoints[0][1]);
+      for (const [px, py] of topPoints.slice(1)) ctx.lineTo(px, py);
+      ctx.strokeStyle = POLYBLUE;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(topPoints[0][0], topPoints[0][1]);
+      for (const [px, py] of topPoints.slice(1)) ctx.lineTo(px, py);
+      ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+      ctx.lineWidth = 0.85;
+      ctx.stroke();
+    }
+
+    labelPositions.push({ x: leftX, y: rowY, label: market.label, baseProb: market.baseProb, isHovered });
+    rightPositions.push({ rightX, y: rowY, market, isHovered });
+  }
+
+  // Draw left labels
+  ctx.font = '10px "Share Tech Mono", monospace';
+  ctx.textAlign = 'right';
+  for (const lp of labelPositions) {
+    if (lp.isHovered) {
+      ctx.fillStyle = POLYBLUE;
+    } else {
+      const opacity = 0.45 + lp.baseProb * 0.4;
+      ctx.fillStyle = `rgba(255,255,255,${opacity})`;
+    }
+    ctx.fillText(lp.label.toUpperCase(), lp.x - 14, lp.y + 3);
+  }
+
+  // Draw right labels
+  ctx.textAlign = 'left';
+  for (const rp of rightPositions) {
+    const pct = Math.round(rp.market.baseProb * 100);
+    const descriptor = pct >= 50 ? 'YES' : 'NO';
+    const displayPct = pct >= 50 ? pct : 100 - pct;
+
+    if (rp.isHovered) {
+      ctx.fillStyle = POLYBLUE;
+    } else {
+      const opacity = 0.35 + rp.market.baseProb * 0.35;
+      ctx.fillStyle = `rgba(255,255,255,${opacity})`;
+    }
+    ctx.fillText(`${displayPct}% ${descriptor}`, rp.rightX + 60, rp.y + 3);
+  }
+}
+
+let mouseX = 0;
+let mouseY = 0;
+
+function getHoveredIndex(clientY) {
+  const H = canvas.height;
+  const originY = H * 0.5;
+  const stepY = H * 0.027;
+  const numMarkets = markets.length;
+  const startOffsetY = -(numMarkets * stepY) / 2;
+
+  for (let i = 0; i < numMarkets; i++) {
+    const rowY = originY + startOffsetY + i * stepY;
+    if (Math.abs(clientY - rowY) < stepY * 0.55) return i;
+  }
+  return -1;
+}
+
+function formatVolume(v) {
+  if (v >= 1000000) return '$' + (v / 1000000).toFixed(1) + 'M';
+  if (v >= 1000) return '$' + (v / 1000).toFixed(0) + 'K';
+  return '$' + v;
+}
+
+function updateInfoPanel(market) {
+  const panel = document.getElementById('info-panel');
+  if (!market) {
+    panel.classList.remove('visible');
+    return;
+  }
+
+  const yes = Math.round(market.baseProb * 100);
+  const no = 100 - yes;
+  const spread = Math.max(1, Math.round(market.volatility * 8));
+  const oi = Math.round(market.volume * 0.38);
+
+  document.getElementById('ip-title').textContent = market.label.toUpperCase();
+  document.getElementById('ip-category').textContent = market.category.toUpperCase();
+  document.getElementById('ip-yes').textContent = yes + '¢';
+  document.getElementById('ip-no').textContent = no + '¢';
+  document.getElementById('ip-bar').style.width = yes + '%';
+  document.getElementById('ip-spread').textContent = spread + '¢';
+  document.getElementById('ip-prob').textContent = yes + '%';
+  document.getElementById('ip-volume').textContent = formatVolume(market.volume);
+  document.getElementById('ip-traders').textContent = market.traders.toLocaleString();
+  document.getElementById('ip-oi').textContent = formatVolume(oi);
+
+  panel.classList.add('visible');
+}
+
+canvas.addEventListener('mousemove', (e) => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+  const newHovered = getHoveredIndex(mouseY);
+  if (newHovered !== hoveredIndex) {
+    hoveredIndex = newHovered;
+    draw();
+  }
+  updateInfoPanel(hoveredIndex >= 0 ? markets[hoveredIndex] : null);
+});
+
+canvas.addEventListener('mouseleave', () => {
+  hoveredIndex = -1;
+  draw();
+  updateInfoPanel(null);
+});
+
+window.addEventListener('resize', resize);
+resize();
+</script>
+</body>
+</html>
