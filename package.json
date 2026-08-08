@@ -1,0 +1,8 @@
+{
+  "name": "polytopography",
+  "version": "2.0.0",
+  "private": true,
+  "description": "POLYTOPOGRAPHY — the live Polymarket board read as stacked terrain. One ridge per market.",
+  "type": "module",
+  "engines": { "node": ">=20" }
+}

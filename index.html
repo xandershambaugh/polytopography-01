@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>POLYTOPOGRAPHY — The Polymarket Field</title>
+<meta name="description" content="Thirty-four live Polymarket markets, one ridge each. The trace is real executed probability across each market's life, stacked into terrain.">
+<meta property="og:title" content="POLYTOPOGRAPHY">
+<meta property="og:description" content="A stacked-topography read of the live Polymarket board. One ridge per market.">
+<meta property="og:type" content="website">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+
+<canvas class="ridge" id="ridge" aria-hidden="true"></canvas>
+
+<header class="plate-head">
+  <a class="wordmark" href="./">
+    Polytopography
+    <span class="sub">The Polymarket Field</span>
+  </a>
+
+  <!-- The polytectonics folder row is deliberately absent. This plate has one
+       surface and nowhere to navigate to, and the art direction's inherited
+       discipline is subtraction. What sits here instead is the only furniture
+       that earns the space: the evidence that the numbers are live. -->
+  <div class="status">
+    <div class="live"><span class="dot" aria-hidden="true"></span><span id="st-main">Connecting</span></div>
+    <div class="meta" id="st-sub">Polymarket Gamma · CLOB</div>
+  </div>
+</header>
+
+<main class="brandsheet" aria-hidden="true"></main>
+
+<div class="boot" id="boot">Reading the board…</div>
+
+<!-- Minimum axis furniture, and it has to be exact about the encoding: one time
+     axis, one shared height scale, market names on the left rail, live price on
+     the right. Nothing else. -->
+<div class="axis">
+  <span id="ax-left">T — window open</span>
+  <span class="mid">Normalised market life → now · height = repricing from window low, shared scale · right rail = live price</span>
+  <span>Now</span>
+</div>
+
+<!-- the colorway popup -->
+<div class="swatchbar" id="swatchbar"></div>
+
+<div class="scrim" id="scrim"></div>
+<div class="dossier" id="dossier" role="dialog" aria-modal="true" aria-label="Market detail"></div>
+
+<script type="module">
+import { createField } from './assets/field.js';
+import { initColorways, initDossier } from './assets/ui.js';
+
+initColorways(document.getElementById('swatchbar'));
+
+const scrim   = document.getElementById('scrim');
+const dossier = initDossier(document.getElementById('dossier'), scrim);
+const boot    = document.getElementById('boot');
+const stMain  = document.getElementById('st-main');
+const stSub   = document.getElementById('st-sub');
+
+let allRows = [];
+
+const field = createField(document.getElementById('ridge'), {
+  onPick: (m) => dossier.show(m, allRows),
+});
+
+function clock(ts) {
+  return new Date(ts).toLocaleTimeString('en-US',
+    { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+async function load() {
+  try {
+    const r = await fetch('/api/field', { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    if (!data.markets || !data.markets.length) throw new Error('empty field');
+
+    allRows = data.markets;
+    field.setRows(allRows);
+
+    stMain.textContent = `Live — ${data.count} markets`;
+    stSub.textContent  = `Updated ${clock(data.generated)} · Gamma + CLOB`;
+    boot.classList.add('gone');
+  } catch (err) {
+    // Fail loudly and honestly. The one thing this page must never do is show a
+    // convincing field of invented markets — the whole point of v2 is that every
+    // line on screen came off the wire.
+    boot.textContent = 'Could not reach Polymarket — ' + err.message;
+    stMain.textContent = 'Offline';
+    stSub.textContent = 'Upstream unavailable';
+  }
+}
+
+load();
+// The board moves. Re-read it every 90s; the edge cache holds for 180s so this
+// is cheap, and it keeps the "updated HH:MM" stamp honest.
+setInterval(load, 90_000);
+</script>
+</body>
+</html>

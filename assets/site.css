@@ -1,0 +1,480 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   POLYTOPOGRAPHY v2
+
+   One stacked-topography plate. Thirty-four live Polymarket markets, one row
+   each, the trace is real executed probability over the market's life.
+
+   THE LOAD-BEARING RULE OF THIS FILE
+   ──────────────────────────────────
+   Every colorway is a complete token block on :root[data-theme="…"]. The canvas
+   does NOT hardcode a single colour — assets/field.js resolves --ground, --accent,
+   --line-rgb and --glow out of the computed style on every frame.
+
+   --ground is the occlusion fill. Each ridge paints a solid --ground polygon
+   beneath its own stroke to hide the rows behind it; that occlusion is the entire
+   reason a stack of 34 jagged lines reads as receding terrain instead of a ball
+   of wool. If --ground ever stops matching the actual page background, every
+   ridge paints a visible band across its neighbours and the stack collapses into
+   a solid block. So: --ground must be OPAQUE, and it must equal the painted page
+   background exactly. Never set it to a translucent colour.
+
+   That is also why the dot grid sits at z-index:-1, behind the canvas. Dots read
+   in the open sky above and below the stack, and the terrain occludes them where
+   it passes — which is correct: the ridges are in front of the ground, not
+   printed on it.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap');
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ══ COLORWAY 01 — PAPER ══════════════════════════════════════════════════════
+   The default. White-to-light-grey ground, blue line work. This is Craft's
+   original figure before Saville inverted it: dark trace on a light field.     */
+:root,
+:root[data-theme="paper"] {
+  --ground:    #F2F2EF;
+  --ink:       #14161A;
+  --ink-soft:  #5B6068;
+  --ink-faint: #9AA0A8;
+  --accent:    #2E5CFF;          /* Poly Blue */
+  --glow:      rgba(46,92,255,.16);
+  --line-rgb:  46,92,255;        /* the stack itself runs blue on paper */
+  --line-lo:   .38;              /* front rows — nearest, quietest */
+  --line-hi:   .82;              /* back rows  — furthest, strongest */
+
+  --dot-col:   transparent;
+  --dot:       60px;
+  --doty:      50px;
+
+  --panel:     rgba(255,255,255,.92);
+  --panel-brd: rgba(20,22,26,.14);
+  --panel-sh:  0 18px 60px rgba(20,22,26,.16);
+  --hairline:  rgba(20,22,26,.12);
+  --chip:      rgba(20,22,26,.07);
+
+  --grain-op:   .16;
+  --grain-mode: multiply;
+  --scheme:     light;
+}
+
+/* ══ COLORWAY 02 — PAPER GRID ════════════════════════════════════════════════
+   The light plate with the Kiko dot grid restored under it.                    */
+:root[data-theme="paper-grid"] {
+  --ground:    #E9E9E5;
+  --ink:       #14161A;
+  --ink-soft:  #565B63;
+  --ink-faint: #91979F;
+  --accent:    #2E5CFF;
+  --glow:      rgba(46,92,255,.16);
+  --line-rgb:  46,92,255;
+  --line-lo:   .38;
+  --line-hi:   .84;
+
+  --dot-col:   rgba(20,22,26,.20);
+  --dot:       60px;
+  --doty:      50px;
+
+  --panel:     rgba(255,255,255,.94);
+  --panel-brd: rgba(20,22,26,.16);
+  --panel-sh:  0 18px 60px rgba(20,22,26,.18);
+  --hairline:  rgba(20,22,26,.14);
+  --chip:      rgba(20,22,26,.07);
+
+  --grain-op:   .18;
+  --grain-mode: multiply;
+  --scheme:     light;
+}
+
+/* ══ COLORWAY 03 — CARBON ════════════════════════════════════════════════════
+   Saville's inversion. Black ground, dot grid, white stack — and the hovered
+   trace is the only blue on the plate.                                         */
+:root[data-theme="carbon"] {
+  --ground:    #000000;
+  --ink:       #FFFFFF;
+  --ink-soft:  rgba(255,255,255,.62);
+  --ink-faint: rgba(255,255,255,.34);
+  --accent:    #2E5CFF;
+  --glow:      rgba(46,92,255,.26);
+  --line-rgb:  255,255,255;
+  --line-lo:   .34;
+  --line-hi:   .92;
+
+  --dot-col:   rgba(255,255,255,.20);
+  --dot:       60px;
+  --doty:      50px;
+
+  --panel:     rgba(10,10,10,.94);
+  --panel-brd: rgba(255,255,255,.20);
+  --panel-sh:  0 18px 70px rgba(0,0,0,.7);
+  --hairline:  rgba(255,255,255,.16);
+  --chip:      rgba(255,255,255,.10);
+
+  --grain-op:   .26;
+  --grain-mode: screen;
+  --scheme:     dark;
+}
+
+/* ══ COLORWAY 04 — TECTONIC ══════════════════════════════════════════════════
+   Lifted verbatim from polytectonics.com/field.html — the black-green sheet,
+   the Kiko grid at 60×50, the pale live line.                                  */
+:root[data-theme="tectonic"] {
+  --ground:    #0A1410;
+  --ink:       #E4EFE7;
+  --ink-soft:  #B6CBBD;
+  --ink-faint: rgba(182,203,189,.52);
+  --accent:    #9FE8BE;
+  --glow:      rgba(159,232,190,.18);
+  --line-rgb:  190,235,208;
+  --line-lo:   .34;
+  --line-hi:   .74;
+
+  --dot-col:   rgba(122,201,158,.30);
+  --dot:       60px;
+  --doty:      50px;
+
+  --panel:     rgba(9,20,15,.95);
+  --panel-brd: rgba(159,232,190,.24);
+  --panel-sh:  0 18px 70px rgba(0,0,0,.6);
+  --hairline:  rgba(159,232,190,.18);
+  --chip:      rgba(159,232,190,.12);
+
+  --grain-op:   .26;
+  --grain-mode: screen;
+  --scheme:     dark;
+}
+
+/* ══ COLORWAY 05 — FOREST ════════════════════════════════════════════════════
+   The deeper cut of the same family: a true forest ground, no dots, the stack
+   running warm-pale against it.                                                */
+:root[data-theme="forest"] {
+  --ground:    #16301F;
+  --ink:       #EAF3E9;
+  --ink-soft:  #B8CFBB;
+  --ink-faint: rgba(184,207,187,.50);
+  --accent:    #7FE0A0;
+  --glow:      rgba(127,224,160,.20);
+  --line-rgb:  214,238,214;
+  --line-lo:   .30;
+  --line-hi:   .70;
+
+  --dot-col:   transparent;
+  --dot:       60px;
+  --doty:      50px;
+
+  --panel:     rgba(15,40,25,.95);
+  --panel-brd: rgba(127,224,160,.24);
+  --panel-sh:  0 18px 70px rgba(0,0,0,.55);
+  --hairline:  rgba(127,224,160,.18);
+  --chip:      rgba(127,224,160,.12);
+
+  --grain-op:   .22;
+  --grain-mode: screen;
+  --scheme:     dark;
+}
+
+:root {
+  --body:  'Courier Prime', ui-monospace, 'Courier New', monospace;
+  --serif: 'EB Garamond', Georgia, 'Times New Roman', serif;
+}
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--serif);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  transition: background .32s ease, color .32s ease;
+}
+
+/* ── the Kiko dot grid ───────────────────────────────────────────────────────
+   Fixed ground at z-index:-1 so it reads as a sheet the field sits on rather
+   than noise printed over it. Colorways without dots set --dot-col:transparent
+   and the same rule renders nothing.                                          */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background-image: radial-gradient(var(--dot-col) 1.1px, transparent 1.2px);
+  background-size: var(--dot) var(--doty);
+  transition: background-size .32s ease;
+}
+
+/* The grain the polytectonics plate wears. Blend mode flips with the colorway:
+   `screen` lifts grain out of a dark ground, `multiply` settles it into a light
+   one. Using screen on paper washes the plate to grey. */
+html::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 400; pointer-events: none;
+  opacity: var(--grain-op);
+  mix-blend-mode: var(--grain-mode);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='gamma' exponent='5.2' amplitude='1.5'/%3E%3CfeFuncG type='gamma' exponent='5.2' amplitude='1.5'/%3E%3CfeFuncB type='gamma' exponent='5.2' amplitude='1.5'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
+
+canvas.ridge {
+  position: fixed; inset: 0; z-index: 0; display: block;
+  /* Pointer events are tracked on window, never on the canvas — see field.js. */
+  pointer-events: none;
+}
+
+/* ── header row ──────────────────────────────────────────────────────────────
+   Wordmark left, live status right. The folders from the polytectonics plate
+   are deliberately NOT carried over: this page has one surface and nowhere to
+   navigate to, and the art direction's inherited discipline is subtraction.
+   What replaces them is the only furniture that earns its place — the evidence
+   that the numbers on screen are live rather than decorative.                 */
+.plate-head {
+  position: relative; z-index: 411;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 22px;
+  padding: clamp(16px,2.6vh,24px) clamp(18px,3vw,34px) 0 clamp(20px,4vw,44px);
+}
+.wordmark {
+  font-family: var(--body); font-size: 10.5px; font-weight: 700;
+  letter-spacing: .13em; text-transform: uppercase;
+  color: var(--ink); text-decoration: none; white-space: nowrap;
+}
+.wordmark .sub {
+  display: block; margin-top: 4px; font-weight: 400;
+  font-size: 8px; letter-spacing: .18em; color: var(--ink-faint);
+}
+
+.status { text-align: right; font-family: var(--body); }
+.status .live {
+  font-size: 8px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--ink-soft); display: flex; align-items: center; gap: 7px; justify-content: flex-end;
+}
+.status .dot {
+  width: 5px; height: 5px; border-radius: 50%; background: var(--accent);
+  box-shadow: 0 0 0 0 var(--glow); animation: pulse 2.6s ease-out infinite;
+}
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 var(--glow); }
+  70%  { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.status .meta {
+  margin-top: 4px; font-size: 8px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--ink-faint);
+}
+
+/* ── axis furniture ──────────────────────────────────────────────────────────
+   The minimum that still lets the shape be trusted: one time axis, one
+   probability scale, market names on the left rail (drawn on canvas). Nothing
+   else. Saville removed every label from Craft's figure; this keeps only what
+   a reader needs to know the trace is not decoration.                         */
+.axis {
+  position: fixed; left: 0; right: 0; bottom: clamp(18px,3vh,28px);
+  z-index: 411; pointer-events: none;
+  display: flex; justify-content: space-between;
+  padding: 0 clamp(18px,3vw,34px) 0 clamp(20px,4vw,44px);
+  font-family: var(--body); font-size: 8px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--ink-faint);
+}
+.axis .mid { text-align: center; }
+
+/* ── the colorway popup, bottom left ────────────────────────────────────────*/
+.swatchbar {
+  position: fixed; left: clamp(20px,4vw,44px); bottom: clamp(52px,8vh,74px);
+  z-index: 500; font-family: var(--body);
+}
+.swatch-toggle {
+  display: flex; align-items: center; gap: 9px;
+  background: var(--panel); border: 1px solid var(--panel-brd);
+  color: var(--ink); cursor: pointer;
+  padding: 8px 12px; border-radius: 999px;
+  font-family: var(--body); font-size: 8px; font-weight: 700;
+  letter-spacing: .16em; text-transform: uppercase;
+  backdrop-filter: blur(10px); box-shadow: var(--panel-sh);
+  transition: transform .16s ease, border-color .16s ease;
+}
+.swatch-toggle:hover { transform: translateY(-1px); border-color: var(--accent); }
+.swatch-toggle .bead {
+  width: 12px; height: 12px; border-radius: 50%;
+  border: 1px solid var(--panel-brd);
+  background: var(--accent);
+}
+
+.swatch-pop {
+  position: absolute; left: 0; bottom: calc(100% + 10px);
+  width: 232px; padding: 13px;
+  background: var(--panel); border: 1px solid var(--panel-brd);
+  box-shadow: var(--panel-sh); backdrop-filter: blur(14px);
+  opacity: 0; visibility: hidden; transform: translateY(6px);
+  transition: opacity .18s ease, transform .18s ease, visibility .18s;
+}
+.swatchbar.open .swatch-pop { opacity: 1; visibility: visible; transform: translateY(0); }
+
+.swatch-pop h4 {
+  font-size: 7.5px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--ink-faint); margin-bottom: 10px;
+}
+.swatch-row {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  background: none; border: 0; cursor: pointer; color: var(--ink);
+  padding: 6px 7px; margin: 0 0 2px; text-align: left;
+  font-family: var(--body); transition: background .14s ease;
+}
+.swatch-row:hover { background: var(--chip); }
+.swatch-row[aria-checked="true"] { background: var(--chip); }
+.swatch-row .chipwrap {
+  position: relative; width: 30px; height: 20px; flex: 0 0 auto;
+  border: 1px solid var(--panel-brd); overflow: hidden;
+}
+/* Each chip previews its colorway honestly: real ground, real dot grid, and a
+   real two-stroke miniature of the stack in that colorway's line colour. */
+.swatch-row .chipwrap i {
+  position: absolute; inset: 0; display: block;
+  background-color: var(--c-ground);
+  background-image: radial-gradient(var(--c-dot) .8px, transparent .9px);
+  background-size: 7px 6px;
+}
+.swatch-row .chipwrap b {
+  position: absolute; left: 2px; right: 2px; top: 7px; height: 1px;
+  background: var(--c-line); opacity: .75;
+  box-shadow: 0 4px 0 -.4px var(--c-line), 0 8px 0 -.4px var(--c-accent);
+}
+.swatch-row .nm {
+  font-size: 8px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+}
+.swatch-row .ds {
+  display: block; margin-top: 2px; font-weight: 400;
+  font-size: 7px; letter-spacing: .1em; color: var(--ink-faint); text-transform: none;
+}
+.swatch-row .tick { margin-left: auto; color: var(--accent); font-size: 10px; opacity: 0; }
+.swatch-row[aria-checked="true"] .tick { opacity: 1; }
+
+/* ── the dossier ─────────────────────────────────────────────────────────────
+   Click a ridge and the market behind it opens. Every field here is off the
+   wire — see api/field.js. Where the upstream does not carry a value the row
+   renders an em-dash rather than a plausible guess.                           */
+.scrim {
+  position: fixed; inset: 0; z-index: 600;
+  background: color-mix(in srgb, var(--ground) 62%, transparent);
+  backdrop-filter: blur(3px);
+  opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility .2s;
+}
+.scrim.open { opacity: 1; visibility: visible; }
+
+.dossier {
+  position: fixed; z-index: 601;
+  top: 50%; left: 50%; transform: translate(-50%,-48%) scale(.98);
+  width: min(92vw, 560px); max-height: min(86vh, 760px); overflow-y: auto;
+  background: var(--panel); border: 1px solid var(--panel-brd);
+  box-shadow: var(--panel-sh); backdrop-filter: blur(16px);
+  padding: 22px 24px 20px;
+  opacity: 0; visibility: hidden;
+  transition: opacity .22s ease, transform .22s ease, visibility .22s;
+  font-family: var(--body);
+}
+.dossier.open { opacity: 1; visibility: visible; transform: translate(-50%,-50%) scale(1); }
+
+.dossier .d-top { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 4px; }
+.dossier .d-icon {
+  width: 42px; height: 42px; flex: 0 0 auto; object-fit: cover;
+  border: 1px solid var(--panel-brd); background: var(--chip);
+}
+.dossier .d-eyebrow {
+  font-size: 7.5px; font-weight: 700; letter-spacing: .2em;
+  text-transform: uppercase; color: var(--ink-faint); margin-bottom: 6px;
+}
+.dossier h2 {
+  font-family: var(--serif); font-weight: 500;
+  font-size: clamp(17px,2.2vw,21px); line-height: 1.24; color: var(--ink);
+  letter-spacing: 0;
+}
+.dossier .d-close {
+  margin-left: auto; flex: 0 0 auto; background: none; border: 0; cursor: pointer;
+  color: var(--ink-faint); font-family: var(--body); font-size: 14px; line-height: 1;
+  padding: 2px 4px;
+}
+.dossier .d-close:hover { color: var(--accent); }
+
+/* the price bar — the one place YES/NO is shown at size */
+.d-price { display: flex; align-items: baseline; gap: 14px; margin: 18px 0 8px; }
+.d-price .big {
+  font-family: var(--body); font-size: 40px; font-weight: 700;
+  letter-spacing: -.02em; line-height: 1; color: var(--accent);
+}
+.d-price .side {
+  font-size: 8px; font-weight: 700; letter-spacing: .2em;
+  text-transform: uppercase; color: var(--ink-faint);
+}
+.d-price .no { margin-left: auto; text-align: right; color: var(--ink-soft); }
+.d-price .no b { display: block; font-size: 17px; letter-spacing: -.01em; color: var(--ink); }
+
+.d-bar { height: 3px; background: var(--chip); position: relative; margin-bottom: 20px; }
+.d-bar i { position: absolute; inset: 0 auto 0 0; background: var(--accent); transition: width .4s ease; }
+
+.d-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px;
+  border-top: 1px solid var(--hairline); padding-top: 14px;
+}
+.d-row {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+  padding: 7px 0; border-bottom: 1px solid var(--hairline);
+}
+.d-row .k {
+  font-size: 7.5px; font-weight: 700; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--ink-faint); white-space: nowrap;
+}
+.d-row .v { font-size: 11px; color: var(--ink); text-align: right; letter-spacing: .02em; }
+.d-row .v.muted { color: var(--ink-faint); }
+
+.d-sec {
+  margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--hairline);
+}
+.d-sec h5 {
+  font-size: 7.5px; font-weight: 700; letter-spacing: .2em;
+  text-transform: uppercase; color: var(--ink-faint); margin-bottom: 9px;
+}
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chips span {
+  font-size: 7.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  background: var(--chip); color: var(--ink-soft); padding: 4px 7px;
+}
+.chips span.geo { color: var(--accent); }
+
+.d-note {
+  margin-top: 14px; font-size: 8px; line-height: 1.6; letter-spacing: .08em;
+  color: var(--ink-faint); text-transform: uppercase;
+}
+.d-go {
+  display: inline-block; margin-top: 16px;
+  font-size: 8px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+  background: var(--accent); color: var(--ground); text-decoration: none;
+  padding: 10px 14px; transition: opacity .15s;
+}
+.d-go:hover { opacity: .85; }
+
+/* the sparkline inside the dossier — the row's own trace, drawn large */
+.d-spark { width: 100%; height: 76px; display: block; margin: 4px 0 2px; }
+
+/* ── boot / error states ────────────────────────────────────────────────────*/
+.boot {
+  position: fixed; inset: 0; z-index: 300; display: flex;
+  align-items: center; justify-content: center; pointer-events: none;
+  font-family: var(--body); font-size: 8px; letter-spacing: .22em;
+  text-transform: uppercase; color: var(--ink-faint);
+  transition: opacity .4s ease;
+}
+.boot.gone { opacity: 0; }
+
+@media (max-width: 720px) {
+  .plate-head { padding: 14px 14px 0 18px; gap: 12px; }
+  .status .live, .status .meta { font-size: 7px; }
+  .axis { font-size: 7px; padding: 0 14px 0 18px; }
+  .axis .mid { display: none; }
+  .swatchbar { left: 14px; bottom: 46px; }
+  .dossier { padding: 18px 16px 16px; }
+  .d-grid { grid-template-columns: 1fr; gap: 0; }
+  :root { --dot: 44px; --doty: 38px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
