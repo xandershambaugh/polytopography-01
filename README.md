@@ -23,14 +23,18 @@ Art direction board: Figma `fnBLQkqekgJwcPrYaKoy45` → page **Topography**.
 | | |
 |---|---|
 | **One row** | one Polymarket event, at its favourite (the leading outcome) |
-| **The x-axis** | that market's life, normalised, **right edge pinned to NOW for every row** |
+| **The x-axis** | that market's observed window, normalised, **right edge pinned to NOW for every row** (see caveat below) |
 | **Ridge height** | how far the market has **repriced from its own low** over the window |
 | **The gain** | **shared by every row** — a 60¢ swing is three times the ridge of a 20¢ swing, everywhere |
 | **Left rail** | market name |
 | **Right rail** | live price, in cents |
 | **Row order** | resolution date, soonest first |
 
-Normalising the x-axis to time-to-resolution rather than wall-clock is the move the whole piece turns on: a ninety-day election and a ten-day sports market land on the same axis and become directly comparable curves, aligned on **phase** rather than on the calendar.
+Every row is normalised to its own observed window and pinned to **now** at the right edge, so markets that opened on different days and run for wildly different durations still land on one axis and stay comparable across the stack. Rows are read across, not against a date.
+
+> **What this is not, yet.** The art direction calls for the x-axis to be normalised to *time-to-resolution*, so that a ninety-day election and a ten-day sports market align on **phase** — one 20% through its life sitting directly above another 20% through its life. This build does not do that. The right edge is now, not resolution, so a market 99% of the way to settlement and one 5% in render identically in x.
+>
+> The blocker is upstream: CLOB's `prices-history` returns full market life but caps the lookback at roughly one month, so for any market older than that the true opening phase simply isn't retrievable, and phase-aligning on a truncated window would be worse than not aligning at all. Resolution date is already on every row (`daysToResolve`), so the change is a renderer edit the moment deeper history is available.
 
 You are not reading a number. You are reading a population and its exceptions.
 

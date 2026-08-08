@@ -17,6 +17,8 @@
    and four of the five colorways break instantly and obviously.
    ───────────────────────────────────────────────────────────────────────────── */
 
+import { centsLabel } from './format.js';
+
 export function createField(canvas, opts = {}) {
   const ctx = canvas.getContext('2d');
   const onHover = opts.onHover || (() => {});
@@ -90,9 +92,12 @@ export function createField(canvas, opts = {}) {
   const TOP_PAD = 108;   // clearance for the header row
   const BOT_PAD = 92;    // clearance for the axis furniture and the swatch bar
 
-  // Per-row floor + the largest repricing on the plate, computed once per load.
+  // Per-row floor + the largest repricing on the plate. maxRange starts at 0 so
+  // the first load sets it from real data; it only ever grows after that (see
+  // setRows). Starting it at 1 would pin it there forever and reserve headroom
+  // for a full 0→1 swing no live market ever shows.
   let floors = [];
-  let maxRange = 1;
+  let maxRange = 0;
 
   // The size knobs live here and nowhere else.
   //   w  — trace width
@@ -119,11 +124,12 @@ export function createField(canvas, opts = {}) {
     // theoretical 0→1 swing that no live market ever shows. Reserving the
     // theoretical maximum wastes most of the plate on empty sky.
     const avail = Math.max(H - TOP_PAD - BOT_PAD, 200);
-    const sy = Math.max(9, Math.min(avail / (n + AMP * maxRange * 1.05), 30));
+    const mr = maxRange > 0 ? maxRange : 0.5;   // guard: geo() before first load
+    const sy = Math.max(9, Math.min(avail / (n + AMP * mr * 1.05), 30));
     const h = sy * 1.05;
 
     const ox = railL + 24 + w / 2;
-    const oy = TOP_PAD + h * AMP * maxRange;
+    const oy = TOP_PAD + h * AMP * mr;
     return { w, sx, sy, h, ox, oy, railL, railR, n };
   }
 
@@ -243,11 +249,12 @@ export function createField(canvas, opts = {}) {
         : '10px "Courier Prime", ui-monospace, monospace';
       ctx.fillText(row.label.toUpperCase(), rowX - g.w / 2 - 14, rowY);
 
-      // right — the live YES price, in cents, straight off outcomePrices
+      // right — the live YES price. Formatted through the shared helper so the
+      // rail and the dossier can never disagree, and so a market still taking
+      // orders never prints as a settled 100¢ or an impossible 0¢.
       ctx.textAlign = 'left';
       ctx.fillStyle = isHot ? t.accent : t.soft;
-      const cents = row.yes == null ? '—' : Math.round(row.yes * 100) + '¢';
-      ctx.fillText(cents, rowX + g.w / 2 + 16, rowY);
+      ctx.fillText(centsLabel(row.yes), rowX + g.w / 2 + 16, rowY);
 
       ctx.globalAlpha = 1;
     }
@@ -303,15 +310,34 @@ export function createField(canvas, opts = {}) {
 
   return {
     setRows(next) {
+      const prevHoverId = hover >= 0 && rows[hover] ? rows[hover].id : null;
       rows = next || [];
-      // Each row's floor is its own minimum; the shared gain is then set by the
-      // largest repricing on the plate so the tallest ridge fills the headroom
-      // and everything else is measured against it.
+
+      // Each row's floor is its own minimum; the shared gain is set by the
+      // largest repricing on the plate, so the tallest ridge fills the headroom
+      // and every other row is measured against it.
       floors = rows.map((r) => (r.series && r.series.length ? Math.min(...r.series) : 0));
-      maxRange = rows.reduce((mx, r, i) => {
+      const observed = rows.reduce((mx, r, i) => {
         if (!r.series || !r.series.length) return mx;
         return Math.max(mx, Math.max(...r.series) - floors[i]);
-      }, 0.05) || 1;
+      }, 0.05);
+
+      // MONOTONIC, and that is deliberate. maxRange feeds sy and oy in geo(), so
+      // recomputing it freely means that every 90s poll — whenever a market with
+      // a wider swing enters or leaves the top 34 — silently rescales the whole
+      // plate and the stack visibly jumps under a stationary cursor. Letting it
+      // only ever grow keeps the geometry stable across refreshes while still
+      // guaranteeing the tallest ridge always fits the reserved headroom.
+      maxRange = Math.max(maxRange || 0.05, observed);
+
+      // The row at a given index is not the same market after a refresh. Drop a
+      // stale hover rather than silently re-pointing it at whoever moved into
+      // that slot.
+      if (prevHoverId && (!rows[hover] || rows[hover].id !== prevHoverId)) {
+        hover = -1;
+        onHover(null, -1);
+      }
+
       if (!introStart) introStart = performance.now();
       schedule();
     },

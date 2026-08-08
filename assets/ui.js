@@ -9,6 +9,8 @@
    without a real source in api/field.js.
    ───────────────────────────────────────────────────────────────────────────── */
 
+import { pricePair } from './format.js';
+
 // ── colorways ────────────────────────────────────────────────────────────────
 // `ground` / `dot` / `line` / `accent` drive the preview chip only. The real
 // values live in assets/site.css — these must be kept in step with it by hand,
@@ -144,6 +146,9 @@ export function initDossier(root, scrim) {
 
   function show(m, allRows) {
     const yes = m.yes, no = m.no;
+    // One rounding for both sides — see assets/format.js. The bar width comes
+    // from the same call, so it cannot disagree with the number above it.
+    const pair = pricePair(yes, no);
 
     // Related markets, resolved from the adjacency the API computed. This is the
     // geo layer's seam showing through: today it is a line of text, later it is
@@ -174,15 +179,15 @@ export function initDossier(root, scrim) {
 
       <div class="d-price">
         <div>
-          <div class="big">${yes == null ? '—' : Math.round(yes * 100) + '¢'}</div>
+          <div class="big">${pair.yes}</div>
           <div class="side">${esc((m.outcomes && m.outcomes[0]) || 'Yes')}</div>
         </div>
         <div class="no">
-          <b>${no == null ? '—' : Math.round(no * 100) + '¢'}</b>
+          <b>${pair.no}</b>
           <div class="side">${esc((m.outcomes && m.outcomes[1]) || 'No')}</div>
         </div>
       </div>
-      <div class="d-bar"><i style="width:${yes == null ? 0 : (yes * 100).toFixed(1)}%"></i></div>
+      <div class="d-bar"><i style="width:${pair.barPct}%"></i></div>
 
       <canvas class="d-spark"></canvas>
       <div class="d-note" style="margin-top:0">
