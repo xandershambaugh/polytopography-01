@@ -23,6 +23,7 @@ export function createField(canvas, opts = {}) {
   const ctx = canvas.getContext('2d');
   const onHover = opts.onHover || (() => {});
   const onPick = opts.onPick || (() => {});
+  const mode = opts.mode || 'plate';   // 'plate' (analytical) | 'sleeve' (the cover)
 
   let rows = [];          // market records from /api/field
   let W = 0, H = 0;
@@ -88,9 +89,24 @@ export function createField(canvas, opts = {}) {
   // widest ~6, so ridges overlap several rows deep — which is the point. The
   // occlusion fill turns that overlap into depth; without enough of it the plate
   // reads as 34 ruled lines rather than as terrain.
-  const AMP = 9.0;       // row pitches at a full 0→1 repricing
-  const TOP_PAD = 108;   // clearance for the header row
-  const BOT_PAD = 92;    // clearance for the axis furniture and the swatch bar
+  /* ── SLEEVE MODE ──────────────────────────────────────────────────────────
+     The plate has two presentations of the SAME real series. `plate` is the
+     analytical read — rails, names, prices, one shared scale. `sleeve` is the
+     Unknown Pleasures presentation: black ground, white ridges, no rails, no
+     names, no numbers, the stack centred in a block at the sleeve's own
+     proportions.
+
+     What sleeve does NOT change is the encoding. Height stays REPRICING ON A
+     SHARED GAIN. Per-row min-max was considered and rejected again here: it
+     would make every ridge full-height, and that is not what the cover looks
+     like — on CP 1919 the middle pulses tower and the outer ones are nearly
+     flat. Shared gain reproduces that variation and stays honest, so the two
+     modes are the same measurement drawn at different sizes, not two claims. */
+  const SLEEVE = mode === 'sleeve';
+
+  const AMP = SLEEVE ? 13.0 : 9.0;   // row pitches at a full 0→1 repricing
+  const TOP_PAD = SLEEVE ? 0 : 108;  // clearance for the header row
+  const BOT_PAD = SLEEVE ? 0 : 92;   // clearance for the axis furniture and swatch bar
 
   // Per-row floor + the largest repricing on the plate. maxRange starts at 0 so
   // the first load sets it from real data; it only ever grows after that (see
@@ -106,6 +122,38 @@ export function createField(canvas, opts = {}) {
   //   h  — amplitude unit, multiplied by AMP in draw()
   function geo() {
     const n = Math.max(rows.length, 1);
+
+    /* The sleeve block. Measured off the record cover: the stack occupies about
+       62% of the width and a little over half the height, centred horizontally
+       and sitting slightly above centre. No rails, so the full width is ours and
+       the stack is CENTRED rather than pinned — the opposite of the plate, where
+       centring would push the back rows over the name rail. */
+    if (SLEEVE) {
+      /* NO SHEAR. The plate drifts each row rightwards to build isometric depth,
+         but on the record the lines stack dead straight — every one the same
+         width, left edges flush. Shear is the single change that reads most
+         obviously as "not the cover", so sx is 0 here and the recession is
+         carried entirely by the occlusion fill, which is how the sleeve does it. */
+      const sx = 0;
+      const w = Math.min(W * 0.62, 980);
+      const mr = maxRange > 0 ? maxRange : 0.5;
+
+      // Body height, then the headroom the tallest ridge needs above row 0.
+      // Sized together so the INK — body plus headroom — lands at ~62% of the
+      // plate, the proportion the block occupies on the sleeve.
+      const sy = Math.max(4, Math.min((H * 0.40) / n, 20));
+      const h = sy * 1.05;
+      const head = h * AMP * mr;
+
+      /* Centre on the INK, not on the origin. The drawn extent runs from
+         (oy − head) at the top of the tallest ridge to (oy + (n−1)·sy) at the
+         last baseline; centring oy itself leaves the block sitting low by half
+         the headroom, which is what the first cut did. */
+      const ox = W / 2;
+      const oy = H / 2 - ((n - 1) * sy - head) / 2;
+      return { w, sx, sy, h, ox, oy, railL: 0, railR: 0, n };
+    }
+
     const railL = Math.min(Math.max(W * 0.19, 150), 300);   // left rail — market names
     const railR = Math.min(Math.max(W * 0.09, 72), 132);    // right rail — the ¢
 
@@ -215,12 +263,15 @@ export function createField(canvas, opts = {}) {
         const a = (t.hi - (t.hi - t.lo) * k) * rowIntro;
         trace();
         ctx.strokeStyle = `rgba(${t.line},${a.toFixed(3)})`;
-        ctx.lineWidth = 0.9;
+        // The cover's lines read as solid white hairlines, not as a depth ramp —
+        // the recession there comes from occlusion alone. Heavier here, and the
+        // colorway carries a much flatter lo→hi range to match.
+        ctx.lineWidth = SLEEVE ? 1.35 : 0.9;
         ctx.stroke();
       }
     }
 
-    drawRails(t, g);
+    if (!SLEEVE) drawRails(t, g);
   }
 
   // ── the rails ─────────────────────────────────────────────────────────────
@@ -296,10 +347,14 @@ export function createField(canvas, opts = {}) {
     if (r >= 0) onPick(rows[r], r);
   }
 
+  // Named, so destroy() can take them off again. The mode switch tears one field
+  // down and builds another; without this every switch leaves a live listener set
+  // behind and the hover handling runs N times over on the Nth switch.
+  const onResize = () => { layout(); schedule(); };
   window.addEventListener('mousemove', onMove, { passive: true });
   window.addEventListener('mouseout', onLeave, { passive: true });
   window.addEventListener('click', onClick);
-  window.addEventListener('resize', () => { layout(); schedule(); });
+  window.addEventListener('resize', onResize);
 
   // Colorway changes must force a repaint: the ground fill is baked into pixels
   // already on the canvas and CSS cannot restyle them.
@@ -344,5 +399,16 @@ export function createField(canvas, opts = {}) {
     redraw: schedule,
     hovered: () => (hover >= 0 ? rows[hover] : null),
     rows: () => rows,
+
+    // Detach cleanly. Cancels the pending frame too — a queued draw firing after
+    // teardown paints the old geometry over the new field for one frame.
+    destroy() {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseout', onLeave);
+      window.removeEventListener('click', onClick);
+      window.removeEventListener('resize', onResize);
+      if (raf) { cancelAnimationFrame(raf); raf = 0; }
+      ctx.clearRect(0, 0, W, H);
+    },
   };
 }

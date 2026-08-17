@@ -118,6 +118,25 @@
 /* ══ COLORWAY 04 — TECTONIC ══════════════════════════════════════════════════
    Lifted verbatim from polytectonics.com/field.html — the black-green sheet,
    the Kiko grid at 60×50, the pale live line.                                  */
+/* THE SLEEVE — Unknown Pleasures. Pure black, white hairlines, and a depth ramp
+   that is almost flat: on the record the recession is carried by the occlusion
+   fill alone, not by fading the strokes out. --ground MUST stay #000 and must
+   equal the painted page background exactly, or every ridge paints a band
+   across the rows behind it (field.js re-reads it every frame). */
+:root[data-theme="sleeve"] {
+  --ground:    #000000;
+  --ink:       #FFFFFF;
+  --soft:      rgba(255,255,255,.62);
+  --faint:     rgba(255,255,255,.34);
+  --rule:      rgba(255,255,255,.14);
+  --accent:    #FFFFFF;
+  --glow:      rgba(255,255,255,.20);
+  --line-rgb:  255,255,255;
+  --line-lo:   .82;
+  --line-hi:   1;
+  --dot-col:   transparent;
+}
+
 :root[data-theme="tectonic"] {
   --ground:    #0A1410;
   --ink:       #E4EFE7;
@@ -478,3 +497,34 @@ canvas.ridge {
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
 }
+
+
+/* ── SLEEVE MODE ────────────────────────────────────────────────────────────
+   The cover has nothing on it but the stack. Everything the analytical plate
+   needs — header, status, axis legend, colourway bar — is removed here rather
+   than merely hidden off-screen, so nothing can catch focus or a screen reader
+   on a page that is meant to be a single image. The one control that survives
+   is the corner switch back to the plate, and it stays invisible until asked
+   for. */
+body[data-mode="sleeve"] { background: #000; }
+body[data-mode="sleeve"] .plate-head,
+body[data-mode="sleeve"] .axis,
+body[data-mode="sleeve"] .swatchbar,
+body[data-mode="sleeve"] .brandsheet { display: none; }
+body[data-mode="sleeve"] .boot {
+  color: rgba(255,255,255,.5);
+  font-size: 11px; letter-spacing: .18em; text-transform: uppercase;
+}
+
+.modeswitch {
+  position: fixed; right: 16px; bottom: 14px; z-index: 40;
+  appearance: none; background: none; border: 0; cursor: pointer;
+  font-family: "Courier Prime", ui-monospace, monospace;
+  font-size: 10px; letter-spacing: .18em; text-transform: uppercase;
+  color: rgba(255,255,255,.30);
+  padding: 6px 8px;
+  transition: color .25s ease;
+}
+.modeswitch:hover, .modeswitch:focus-visible { color: rgba(255,255,255,.85); outline: none; }
+body:not([data-mode="sleeve"]) .modeswitch { color: var(--faint); }
+body:not([data-mode="sleeve"]) .modeswitch:hover { color: var(--accent); }

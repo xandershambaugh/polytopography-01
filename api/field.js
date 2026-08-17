@@ -31,7 +31,12 @@
 const GAMMA = 'https://gamma-api.polymarket.com';
 const CLOB = 'https://clob.polymarket.com';
 
-const ROWS = 34;        // rows in the stack — the population
+/* Rows in the stack. Raised 34 → 72 on 2026-08-17 for the sleeve: the record
+   carries ~80 pulses and at 34 the block reads as ruled paper rather than as
+   terrain. Every added row is still a real market off the same register — the
+   count went up, nothing was invented or padded to reach it. Cost is 2 CLOB
+   calls per row through the pool below; the edge cache absorbs it. */
+const ROWS = 72;        // rows in the stack — the population
 const SAMPLES = 240;    // samples per trace after resampling onto the shared axis
 const UA = { 'User-Agent': 'polytopography/2.0 (+https://polytopography.com)' };
 
@@ -112,7 +117,7 @@ async function getJSON(url, { timeout = 9000 } = {}) {
   }
 }
 
-// Bounded concurrency. 34 rows × 2 calls would otherwise open 68 sockets at once
+// Bounded concurrency. 72 rows × 2 calls would otherwise open 144 sockets at once
 // and CLOB starts refusing well before that.
 async function pool(items, limit, fn) {
   const out = new Array(items.length);
@@ -202,6 +207,11 @@ export default async function handler(req, res) {
   try {
     // Over-fetch: we drop non-orderbook markets, thin markets, and all but the
     // deepest market per event, so the register has to be several times ROWS.
+    // Tried widening this to 600 on 2026-08-17 to push the stack past 46 rows for
+    // the sleeve. It changed nothing — the yield is 46 either way, so the binding
+    // constraint is the orderbook/thin-market filtering below, not the register.
+    // Reverted, because 600 cost ~0.8s of cold time for zero extra rows. If more
+    // density is ever wanted, loosen a FILTER and say which; do not pad the count.
     const raw = await getJSON(
       `${GAMMA}/markets?limit=220&order=volume1wk&ascending=false&closed=false&active=true`
     );

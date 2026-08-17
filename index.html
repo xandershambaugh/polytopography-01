@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>POLYTOPOGRAPHY — The Polymarket Field</title>
-<meta name="description" content="Thirty-four live Polymarket markets, one ridge each. The trace is real executed probability across each market's life, stacked into terrain.">
+<meta name="description" content="The live Polymarket board as stacked terrain — one ridge per market, drawn as Unknown Pleasures. The trace is real executed probability across each market's life.">
 <meta property="og:title" content="POLYTOPOGRAPHY">
 <meta property="og:description" content="A stacked-topography read of the live Polymarket board. One ridge per market.">
 <meta property="og:type" content="website">
 <link rel="stylesheet" href="assets/site.css">
 </head>
-<body>
+<body data-mode="sleeve">
 
 <canvas class="ridge" id="ridge" aria-hidden="true"></canvas>
 
@@ -46,6 +46,11 @@
 <!-- the colorway popup -->
 <div class="swatchbar" id="swatchbar"></div>
 
+<!-- The only control on the sleeve. Invisible until hovered, because the cover
+     has nothing on it — but the analytical plate is the same data and must stay
+     reachable, so it is a control rather than a hidden URL. -->
+<button class="modeswitch" id="modeswitch" type="button">Plate</button>
+
 <div class="scrim" id="scrim"></div>
 <div class="dossier" id="dossier" role="dialog" aria-modal="true" aria-label="Market detail"></div>
 
@@ -63,9 +68,44 @@ const stSub   = document.getElementById('st-sub');
 
 let allRows = [];
 
-const field = createField(document.getElementById('ridge'), {
-  onPick: (m) => dossier.show(m, allRows),
+/* TWO PRESENTATIONS OF ONE MEASUREMENT.
+
+   `sleeve` is the default and is the Unknown Pleasures reading: black, white
+   hairlines, no rails, no names, no numbers. `plate` is the analytical read.
+   The encoding does not change between them — the same real Gamma/CLOB series,
+   the same shared-gain repricing — so the switch is a change of presentation,
+   never a change of claim.
+
+   The mode lives in the hash so a view is linkable and survives a reload, the
+   same contract polytectonics uses for its own two views. Rebuilding the field
+   on switch is deliberate: the geometry differs enough that mutating it in
+   place would need every knob re-derived, and the data is already in hand so
+   nothing refetches. */
+let field = null;
+
+function currentMode() {
+  return location.hash.replace('#', '') === 'plate' ? 'plate' : 'sleeve';
+}
+
+function applyMode() {
+  const m = currentMode();
+  document.body.dataset.mode = m;
+  document.documentElement.dataset.theme = m === 'sleeve' ? 'sleeve' : 'paper';
+  document.getElementById('modeswitch').textContent = m === 'sleeve' ? 'Plate' : 'Sleeve';
+
+  if (field) field.destroy?.();
+  field = createField(document.getElementById('ridge'), {
+    mode: m,
+    onPick: (mk) => dossier.show(mk, allRows),
+  });
+  if (allRows.length) field.setRows(allRows);
+}
+
+document.getElementById('modeswitch').addEventListener('click', () => {
+  location.hash = currentMode() === 'sleeve' ? 'plate' : 'sleeve';
 });
+window.addEventListener('hashchange', applyMode);
+applyMode();
 
 function clock(ts) {
   return new Date(ts).toLocaleTimeString('en-US',
